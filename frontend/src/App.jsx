@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import ParentPortal from './pages/ParentPortal';
+import QuizPage from './pages/QuizPage';
 
 export default function App() {
   return (
@@ -27,6 +28,14 @@ export default function App() {
           element={
             <ProtectedRoute role="parent">
               <ParentPortal />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/quiz/:topicId"
+          element={
+            <ProtectedRoute role="student">
+              <QuizPage />
             </ProtectedRoute>
           }
         />

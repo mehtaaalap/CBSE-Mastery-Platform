@@ -21,8 +21,15 @@ This creates the 13 core tables: `users`, `schools`, `students`, `parents`,
 `parent_student_links`, `subjects`, `chapters`, `topics`, `student_progress`,
 `quiz_questions`, `quiz_attempts`, `quiz_attempt_answers`, `study_sessions`.
 
-> Sprint 1 ships the schema without seed data for subjects/chapters/topics — the
-> dashboard will show an empty state until curriculum content is loaded for a grade.
+Load a sample CBSE Class 9 curriculum (3 subjects, 10 chapters, 13 topics) with
+15 quiz questions across 3 of those topics:
+
+```bash
+psql -U postgres -d cbse_platform -f database/seed_curriculum.sql
+```
+
+> Without this, the dashboard shows an empty state until curriculum content is
+> loaded for a student's grade, and no topics have a quiz available.
 
 ## 2. Backend
 
@@ -71,7 +78,9 @@ backend (see `frontend/vite.config.js`).
 | GET | `/api/auth/me` | any | Current user's basic info |
 | GET | `/api/students/me` | student | Student profile |
 | PUT | `/api/students/me` | student | Update grade/school/DOB (onboarding) |
-| GET | `/api/students/me/progress` | student | Per-subject mastery summary |
+| GET | `/api/students/me/progress` | student | Per-subject and per-topic mastery summary |
+| POST | `/api/students/topics/:topicId/quiz/start` | student | Start a quiz attempt; returns 5 random questions (no answers) |
+| POST | `/api/students/quiz-attempts/:attemptId/submit` | student | Submit answers; grades, updates mastery, returns results |
 | GET | `/api/parents/me` | parent | Parent profile |
 | PUT | `/api/parents/me` | parent | Update parent profile |
 | POST | `/api/parents/students/link` | parent | Link a student by email |

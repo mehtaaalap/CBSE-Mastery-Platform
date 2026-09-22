@@ -74,29 +74,54 @@ async function updateMe(req, res, next) {
 
 async function getProgress(req, res, next) {
   try {
-    const studentResult = await pool.query(`SELECT id FROM students WHERE user_id = $1`, [
+    const studentResult = await pool.query(`SELECT id, grade FROM students WHERE user_id = $1`, [
       req.user.id,
     ]);
     if (studentResult.rows.length === 0) {
       return res.status(404).json({ error: 'Student profile not found' });
     }
-    const studentId = studentResult.rows[0].id;
+    const { id: studentId, grade } = studentResult.rows[0];
 
-    const progress = await pool.query(
-      `SELECT sub.id AS subject_id, sub.name AS subject_name,
-              COALESCE(AVG(sp.mastery_level), 0)::int AS average_mastery,
-              COUNT(sp.id) AS topics_started
-       FROM subjects sub
-       LEFT JOIN chapters c ON c.subject_id = sub.id
-       LEFT JOIN topics t ON t.chapter_id = c.id
-       LEFT JOIN student_progress sp ON sp.topic_id = t.id AND sp.student_id = $1
-       WHERE sub.grade = (SELECT grade FROM students WHERE id = $1)
-       GROUP BY sub.id, sub.name
-       ORDER BY sub.name`,
-      [studentId]
+    const subjectsResult = await pool.query(
+      `SELECT id, name FROM subjects WHERE grade = $1 ORDER BY name`,
+      [grade]
     );
 
-    res.json({ subjects: progress.rows });
+    const topicsResult = await pool.query(
+      `SELECT sub.id AS subject_id, c.name AS chapter_name, t.id AS topic_id, t.name AS topic_name,
+              COALESCE(sp.mastery_level, 0) AS mastery_level,
+              EXISTS(SELECT 1 FROM quiz_questions qq WHERE qq.topic_id = t.id) AS has_quiz
+       FROM subjects sub
+       JOIN chapters c ON c.subject_id = sub.id
+       JOIN topics t ON t.chapter_id = c.id
+       LEFT JOIN student_progress sp ON sp.topic_id = t.id AND sp.student_id = $1
+       WHERE sub.grade = $2
+       ORDER BY sub.name, c.chapter_number, t.name`,
+      [studentId, grade]
+    );
+
+    const subjects = subjectsResult.rows.map((subject) => {
+      const topics = topicsResult.rows.filter((row) => row.subject_id === subject.id);
+      const started = topics.filter((topic) => topic.mastery_level > 0);
+      const averageMastery = started.length
+        ? Math.round(started.reduce((sum, topic) => sum + topic.mastery_level, 0) / started.length)
+        : 0;
+      return {
+        subject_id: subject.id,
+        subject_name: subject.name,
+        average_mastery: averageMastery,
+        topics_started: started.length,
+        topics: topics.map((topic) => ({
+          id: topic.topic_id,
+          name: topic.topic_name,
+          chapter: topic.chapter_name,
+          mastery_level: topic.mastery_level,
+          has_quiz: topic.has_quiz,
+        })),
+      };
+    });
+
+    res.json({ subjects });
   } catch (err) {
     next(err);
   }

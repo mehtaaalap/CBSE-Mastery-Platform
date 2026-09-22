@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 
 export default function Dashboard() {
@@ -39,6 +40,24 @@ export default function Dashboard() {
             <p className="subject-meta">
               {subject.average_mastery}% mastery · {subject.topics_started} topic(s) started
             </p>
+            <ul className="topic-list">
+              {subject.topics.map((topic) => (
+                <li key={topic.id} className="topic-item">
+                  <div>
+                    <p className="topic-name">{topic.name}</p>
+                    <p className="topic-chapter">{topic.chapter}</p>
+                  </div>
+                  <div className="topic-actions">
+                    <span className="topic-mastery">{topic.mastery_level}%</span>
+                    {topic.has_quiz && (
+                      <Link to={`/quiz/${topic.id}`} className="btn btn-ghost btn-small">
+                        Take quiz
+                      </Link>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         ))}
       </div>
